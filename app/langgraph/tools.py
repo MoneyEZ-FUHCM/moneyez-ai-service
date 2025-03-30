@@ -66,11 +66,14 @@ def user_input_expense(user_query: str):
         Hãy phân tích thông tin này và trả về kết quả dưới dạng JSON với cấu trúc sau:
         {{
             "amount": [số tiền chi tiêu, chỉ bao gồm con số],
-            "subcategory_code": [mã danh mục phù hợp nhất]
+            "subcategory_code": [mã danh mục phù hợp nhất],
+            "description": [mô tả chi tiêu]
         }}
         
         Chỉ trả về đúng định dạng JSON yêu cầu, không thêm bất kỳ giải thích nào khác.
+        Phần mô tả phân tích từ tin nhắn người dùng nhập vào, ghi ngắn gọn phù hợp
         lưu ý các từ ngữ có thể chỉ tiền như k, lít, củ, xị,..... của ngôn ngữ tiếng việt đơn vị là VNĐ, nhỏ nhất là 1000 VNĐ
+        người dùng có thể nhập không có đơn vị thì mặc định hiểu là nghìn VNĐ. ví dụ: 100 là 100.000 VNĐ
         Nếu không thể xác định được số tiền hoặc danh mục, hãy gán giá trị null cho trường tương ứng.
         """
     )
@@ -90,7 +93,7 @@ def user_input_expense(user_query: str):
             "UserId": userId,
             "Amount": parsed_response.get("amount"),
             "SubcategoryCode": parsed_response.get("subcategory_code"),
-            "Description": user_query
+            "Description": parsed_response.get("description"),
         }
     }
     response = requests.post(url, headers=headers, json=body)

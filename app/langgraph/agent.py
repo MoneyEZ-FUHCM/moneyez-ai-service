@@ -8,6 +8,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.errors import NodeInterrupt
 from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolNode
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from .rag_node import retrieve_knowledge, generate_query, format_docs, should_use_rag
 from .state import AgentState
@@ -24,11 +25,6 @@ Nhiệm vụ của bạn:
 2. Phân loại các khoản chi tiêu vào các danh mục phù hợp
 3. Cung cấp thông tin và tư vấn tài chính
 4. Trả lời mọi câu hỏi liên quan đến tài chính cá nhân một cách chính xác và hữu ích
-
-Khi người dùng nhập thông tin chi tiêu, hãy sử dụng công cụ "user_input_expense" để phân loại và lưu trữ thông tin chi tiêu.
-Hãy luôn thân thiện, hữu ích và nhớ rằng bạn đang giúp đỡ người dùng quản lý tài chính của họ.
-
-Nếu người dùng hỏi về cách sử dụng bạn, hãy giải thích các chức năng và cách họ có thể nhập thông tin chi tiêu.
 """
 
 # Initialize the default model
@@ -84,7 +80,7 @@ async def call_model(state, config):
     print(f"\n[AGENT] Calling model for thread: {thread_id}")
 
     # Get the system prompt from config
-    system = DEFAULT_SYSTEM_PROMPT
+    system = config.get("configurable", {}).get("system_prompt", DEFAULT_SYSTEM_PROMPT)
     print(f"[AGENT] System prompt: {system}")
 
     # Add RAG context to system prompt if available
@@ -100,20 +96,34 @@ async def call_model(state, config):
         print("[AGENT] No RAG context available")
         enhanced_system = system
 
-    # Prepare messages with enhanced system prompt
+    # Prepare messages with enhanced system prompt and ChatPromptTemplate
     messages = state.get("messages", [])
     if not messages:
         # Handle the case when messages is empty
         return {"messages": [SystemMessage(content=enhanced_system)]}
-
-    full_messages = [SystemMessage(content=enhanced_system)] + messages
-    print(f"[AGENT] Total messages in context: {len(full_messages)}")
+    
+    # Create prompt template with system message and agent_scratchpad
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", enhanced_system),
+            MessagesPlaceholder(variable_name="chat_history"),
+            MessagesPlaceholder(variable_name="agent_scratchpad"),
+        ]
+    )
+    
+    # Format the prompt with the chat history
+    formatted_prompt = prompt.format_messages(
+        chat_history=messages,
+        agent_scratchpad=[]  # This can be used for agent's intermediate reasoning if needed
+    )
+    
+    print(f"[AGENT] Total messages in context: {len(formatted_prompt)}")
 
     # Invoke model with tools
     print(f"[AGENT] Invoking model")
     model_with_tools = model.bind_tools(get_tool_defs(config))
     response = await model_with_tools.ainvoke(
-        full_messages,
+        formatted_prompt,
         {
             "system_time": datetime.now(tz=timezone.utc).isoformat(),
         }
