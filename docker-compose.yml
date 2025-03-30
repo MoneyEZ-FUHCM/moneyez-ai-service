@@ -1,0 +1,18 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: assistant_backend
+    ports:
+      - "8888:8888"
+    env_file:
+      - ./backend/.env
+    networks:
+      - app-network
+    depends_on:
+      - mongodb
+
+networks:
+  app-network:
+    driver: bridge
