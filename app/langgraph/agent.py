@@ -4,7 +4,6 @@ from dotenv import load_dotenv
 from langchain_core.messages import SystemMessage
 from langchain_core.tools import BaseTool
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langgraph.checkpoint.memory import MemorySaver
 from langgraph.errors import NodeInterrupt
 from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolNode
@@ -183,6 +182,5 @@ workflow.add_conditional_edges(
 )
 workflow.add_edge("tools", "agent")
 
-# Initialize memory checkpointer to persist conversation state
-memory = MemorySaver()
-assistant_ui_graph = workflow.compile(checkpointer=memory)
+# Compile graph without memory checkpointer
+assistant_ui_graph = workflow.compile()
