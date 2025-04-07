@@ -240,11 +240,11 @@ def get_document_list():
         
         result = [
             {
-                "document_id": doc["document_id"],
+                "id": doc["document_id"],
                 "name": doc["name"],
                 "size": doc["size"],
-                "created_at": doc["created_at"],
-                "content_type": doc["content_type"]
+                "createdDate": doc["created_at"],
+                "contentType": doc["content_type"]
             }
             for doc in all_docs.values()
         ]

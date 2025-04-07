@@ -3,6 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, UploadFile, File, Form, Query
 
 from app.exception.exception import CustomHTTPException
+from app.models import BaseResponse
 
 from .models import DocumentResponse, DocumentListResponse, DocumentDeleteResponse
 from .vectordb import process_and_store_document, delete_document, get_document_list, document_metadata
@@ -71,14 +72,18 @@ async def delete_document_endpoint(document_id: str):
         )
 
 
-@router.get("/knowledge/documents", response_model=DocumentListResponse)
+@router.get("/knowledge/documents", response_model=BaseResponse)
 async def get_documents():
     """Get list of documents in the knowledge base."""
     try:
         print(f"\n[KNOWLEDGE API] Document list requested")
         documents = get_document_list()
         print(f"[KNOWLEDGE API] Returning {len(documents)} documents")
-        return DocumentListResponse(documents=documents)
+        return BaseResponse(
+            status=200,
+            message="Document list retrieved successfully",
+            data=documents
+        )
     except Exception as e:
         print(f"[KNOWLEDGE API] Error getting documents: {str(e)}")
         raise CustomHTTPException(
