@@ -13,6 +13,7 @@ from .rag_node import retrieve_knowledge, generate_query, format_docs, should_us
 from .state import AgentState
 from .tools import tools
 from ..models import AnyArgsSchema
+from langgraph.checkpoint.memory import MemorySaver
 
 load_dotenv()
 
@@ -182,5 +183,6 @@ workflow.add_conditional_edges(
 )
 workflow.add_edge("tools", "agent")
 
-# Compile graph without memory checkpointer
-assistant_ui_graph = workflow.compile()
+# Compile graph with memory checkpointer
+memory = MemorySaver()
+assistant_ui_graph = workflow.compile(checkpointer=memory)

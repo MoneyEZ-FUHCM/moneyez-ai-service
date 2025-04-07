@@ -12,13 +12,11 @@ router = APIRouter()
 
 @router.post("/knowledge/upload", response_model=DocumentResponse)
 async def upload_document(
-        file: UploadFile = File(...),
-        user_id: str = Form("default_user")
+        file: UploadFile = File(...)
 ):
     """Upload a document to the knowledge base."""
     print(f"\n[KNOWLEDGE API] Document upload requested: {file.filename}")
     print(f"[KNOWLEDGE API] Content type: {file.content_type}")
-    print(f"[KNOWLEDGE API] User ID: {user_id}")
 
     try:
         # Read file content
@@ -31,7 +29,6 @@ async def upload_document(
             file=file_content,
             filename=file.filename,
             content_type=file.content_type or "application/octet-stream",
-            user_id=user_id
         )
 
         # Return document info
@@ -75,12 +72,17 @@ async def delete_document_endpoint(document_id: str):
 
 
 @router.get("/knowledge/documents", response_model=DocumentListResponse)
-async def get_documents(user_id: Optional[str] = Query(None)):
+async def get_documents():
     """Get list of documents in the knowledge base."""
-    print(f"\n[KNOWLEDGE API] Document list requested")
-    if user_id:
-        print(f"[KNOWLEDGE API] Filtering for user: {user_id}")
-
-    documents = get_document_list(user_id=user_id)
-    print(f"[KNOWLEDGE API] Returning {len(documents)} documents")
-    return DocumentListResponse(documents=documents)
+    try:
+        print(f"\n[KNOWLEDGE API] Document list requested")
+        documents = get_document_list()
+        print(f"[KNOWLEDGE API] Returning {len(documents)} documents")
+        return DocumentListResponse(documents=documents)
+    except Exception as e:
+        print(f"[KNOWLEDGE API] Error getting documents: {str(e)}")
+        raise CustomHTTPException(
+            status_code=500,
+            error_code="DOCUMENT_LIST_ERROR",
+            message=f"Error getting document list: {str(e)}"
+        )

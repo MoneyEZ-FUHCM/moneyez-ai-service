@@ -83,7 +83,7 @@ def get_document_loader(file_path, content_type):
         raise ValueError(f"Unsupported file type: {content_type}")
 
 
-def process_and_store_document(file, filename, content_type, user_id="default_user"):
+def process_and_store_document(file, filename, content_type):
     """Process document and store it in the vector database."""
     print(f"\n[VECTORDB] Processing document: {filename} ({content_type})")
     print(f"[VECTORDB] File size: {len(file)} bytes")
@@ -116,7 +116,6 @@ def process_and_store_document(file, filename, content_type, user_id="default_us
                 chunk.metadata = {}
             chunk.metadata["document_id"] = document_id
             chunk.metadata["document_name"] = filename
-            chunk.metadata["user_id"] = user_id
 
         # Store document chunks in vector database
         vector_store.add_documents(chunks)
@@ -130,7 +129,6 @@ def process_and_store_document(file, filename, content_type, user_id="default_us
             "created_at": datetime.now().isoformat(),
             "content_type": content_type,
             "chunk_count": len(chunks),
-            "user_id": user_id
         }
 
         return document_id
@@ -194,47 +192,79 @@ def delete_document(document_id):
     return False
 
 
-def get_document_list(user_id=None):
-    """Get list of documents in the knowledge base."""
-    docs = document_metadata.values()
+def _get_documents_from_qdrant():
+    """Get unique documents from Qdrant collection."""
+    try:
+        # Get all points from collection with metadata
+        result = qdrant_client.scroll(
+            collection_name=COLLECTION_NAME,
+            with_payload=True,
+            with_vectors=False,
+            limit=10000
+        )
+        
+        # Extract unique document IDs and metadata
+        unique_docs = {}
+        if result and result[0]:
+            for point in result[0]:
+                if point.payload and "metadata" in point.payload:
+                    doc_id = point.payload["metadata"].get("document_id")
+                    doc_name = point.payload["metadata"].get("document_name")
+                    if doc_id and doc_name and doc_id not in unique_docs:
+                        unique_docs[doc_id] = {
+                            "document_id": doc_id,
+                            "name": doc_name,
+                            "size": 0,  # Size unknown from vector store
+                            "created_at": datetime.now().isoformat(),
+                            "content_type": "unknown"
+                        }
+        return unique_docs
+    except Exception as e:
+        print(f"[VECTORDB] Error getting documents from Qdrant: {str(e)}")
+        return {}
 
-    if user_id:
-        docs = [doc for doc in docs if doc.get("user_id") == user_id]
 
-    return [
-        {
-            "document_id": doc["document_id"],
-            "name": doc["name"],
-            "size": doc["size"],
-            "created_at": doc["created_at"],
-            "content_type": doc["content_type"]
-        }
-        for doc in docs
-    ]
+def get_document_list():
+    """Get list of documents from both metadata and vector store."""
+    try:
+        print(f"[VECTORDB] Getting document list")
+        
+        # Get documents from both sources
+        metadata_docs = document_metadata
+        vector_docs = _get_documents_from_qdrant()
+        
+        # Merge documents (vector store docs take precedence)
+        all_docs = {**metadata_docs, **vector_docs}
+        
+        print(f"[VECTORDB] Found {len(metadata_docs)} docs in metadata, {len(vector_docs)} in vector store")
+        
+        result = [
+            {
+                "document_id": doc["document_id"],
+                "name": doc["name"],
+                "size": doc["size"],
+                "created_at": doc["created_at"],
+                "content_type": doc["content_type"]
+            }
+            for doc in all_docs.values()
+        ]
+        
+        print(f"[VECTORDB] Returning {len(result)} total documents")
+        return result
+    except Exception as e:
+        print(f"[VECTORDB] Error getting document list: {str(e)}")
+        return []
 
 
-def query_knowledge_base(query: str, user_id=None, top_k: int = 3) -> List[Document]:
+def query_knowledge_base(query: str, top_k: int = 3) -> List[Document]:
     """Query the knowledge base for relevant document chunks."""
     print(f"\n[VECTORDB] Querying knowledge base with: {query[:50]}...")
     print(f"[VECTORDB] Retrieving top {top_k} results")
 
     try:
-        # Filter by user_id if provided
-        search_kwargs = {}
-        if user_id:
-            search_kwargs = {
-                "filter": Filter(
-                    must=[
-                        FieldCondition(
-                            key="metadata.user_id",
-                            match=MatchValue(value=user_id)
-                        )
-                    ]
-                )
-            }
 
         # Perform similarity search
-        results = vector_store.similarity_search(query, k=top_k, **search_kwargs)
+        results = vector_store.similarity_search(query, k=top_k)
         print(f"[VECTORDB] Found {len(results)} results")
 
         for i, doc in enumerate(results):
@@ -252,14 +282,11 @@ def query_knowledge_base(query: str, user_id=None, top_k: int = 3) -> List[Docum
 def make_retriever(config: Dict[str, Any]) -> Generator[Any, None, None]:
     """Create a retriever for the agent based on the configuration."""
     try:
-        # Extract user_id from config if available
-        configurable = config.get("configurable", {})
-        user_id = configurable.get("user_id", "default_user")
 
         # Create a retriever function that wraps our query_knowledge_base
         async def retriever(query: str) -> List[Document]:
             print(f"[VECTORDB] Retrieving documents for query: {query[:50]}...")
-            return query_knowledge_base(query, user_id=user_id)
+            return query_knowledge_base(query)
 
         yield retriever
     except Exception as e:
@@ -273,39 +300,24 @@ def make_retriever(config: Dict[str, Any]) -> Generator[Any, None, None]:
         yield fallback_retriever
 
 
-def ensure_docs_have_user_id(docs: Sequence[Document], user_id: str) -> List[Document]:
-    """Ensure all documents have a user_id in their metadata."""
-    return [
-        Document(
-            page_content=doc.page_content,
-            metadata={**(doc.metadata or {}), "user_id": user_id}
-        )
-        for doc in docs
-    ]
-
-
-async def index_documents(docs: List[Document], user_id: str = "default_user") -> bool:
-    """Index documents for a specific user."""
+async def index_documents(docs: List[Document]) -> bool:
+    """Index documents directly into the vector store."""
     try:
-        # Ensure all documents have the user_id in metadata
-        stamped_docs = ensure_docs_have_user_id(docs, user_id)
-
         # Add documents to vector store
-        vector_store.add_documents(stamped_docs)
+        vector_store.add_documents(docs)
 
         # Store basic metadata about each document
-        for doc in stamped_docs:
+        for doc in docs:
             document_id = doc.metadata.get("document_id") or str(uuid.uuid4())
             document_metadata[document_id] = {
                 "document_id": document_id,
                 "name": doc.metadata.get("source", "Unnamed document"),
                 "size": len(doc.page_content),
                 "created_at": datetime.now().isoformat(),
-                "content_type": "text/plain",
-                "user_id": user_id
+                "content_type": "text/plain"
             }
 
-        print(f"[VECTORDB] Successfully indexed {len(docs)} documents for user {user_id}")
+        print(f"[VECTORDB] Successfully indexed {len(docs)} documents")
         return True
     except Exception as e:
         print(f"[VECTORDB] Error indexing documents: {str(e)}")
