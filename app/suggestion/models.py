@@ -18,6 +18,6 @@ class SpendingModel(BaseModel):
 
 class SuggestionResponse(BaseModel):
     """Response for spending model suggestion."""
-    recommended_model: SpendingModel
-    alternative_models: List[SpendingModel]
+    recommendedModel: SpendingModel
+    alternativeModels: List[SpendingModel]
     reasoning: str

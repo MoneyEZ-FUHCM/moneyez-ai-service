@@ -148,8 +148,8 @@ async def generate_suggestion(qa_pairs: List[QAPair]) -> SuggestionResponse:
         
         # Tạo response
         return SuggestionResponse(
-            recommended_model=recommended_model,
-            alternative_models=alternative_models,
+            recommendedModel=recommended_model,
+            alternativeModels=alternative_models,
             reasoning=analysis_result.get("reasoning", "")
         )
         

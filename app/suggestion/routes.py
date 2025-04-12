@@ -50,7 +50,7 @@ async def suggest_spending_model(request: SuggestionRequest):
         # Gọi service để xử lý gợi ý mô hình chi tiêu
         result = await generate_suggestion(qa_pairs)
         
-        print(f"[SUGGESTION API] Returning recommendation: {result.recommended_model.name}")
+        print(f"[SUGGESTION API] Returning recommendation: {result.recommendedModel.name}")
         
         return BaseResponse(
             status=status.HTTP_200_OK,
