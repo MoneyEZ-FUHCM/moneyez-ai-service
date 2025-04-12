@@ -52,7 +52,7 @@ def user_input_expense(user_query: str):
         return "User ID is not set. Please provide a valid user ID."
     
     subcategories = get_user_subcategories(userId)
-    subllm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0)
+    subllm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0)
     template = PromptTemplate(
         input_variables=["subcategories", "user_query"],
         template="""

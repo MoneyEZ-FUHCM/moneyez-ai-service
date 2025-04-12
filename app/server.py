@@ -5,6 +5,7 @@ from app.exception.exception import register_exception_handlers
 from .add_langgraph_route import add_langgraph_route
 
 from .knowledge.routes import router as knowledge_router
+from .suggestion.routes import router as suggestion_router
 from .langgraph.agent import assistant_ui_graph
 
 print("\n[SERVER] Initializing FastAPI application")
@@ -30,8 +31,10 @@ add_langgraph_route(app, assistant_ui_graph, "/api")
 
 # Include routers
 app.include_router(knowledge_router, prefix="/api/knowledge", tags=["knowledge"])
+app.include_router(suggestion_router, tags=["suggestion"])
 
 print("[SERVER] Added knowledge router")
+print("[SERVER] Added suggestion router")
 
 if __name__ == "__main__":
     import uvicorn
