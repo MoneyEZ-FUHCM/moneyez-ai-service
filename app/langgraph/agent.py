@@ -25,7 +25,6 @@ Nhiệm vụ của bạn:
 2. Phân loại các khoản chi tiêu vào các danh mục phù hợp
 3. Cung cấp thông tin và tư vấn tài chính
 4. Trả lời mọi câu hỏi liên quan đến tài chính cá nhân một cách chính xác và hữu ích
-5. Nếu có bất kỳ thông tin nào không rõ ràng, hãy yêu cầu người dùng cung cấp thêm thông tin.
 """
 
 # Initialize the default model
