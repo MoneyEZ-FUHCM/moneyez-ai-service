@@ -353,6 +353,56 @@ def get_current_spending_model():
         print(f"[TOOLS] API request failed: {str(e)}")
         return f"Đã xảy ra lỗi khi lấy thông tin mô hình chi tiêu: {str(e)}"
 
+@tool(return_direct=False)
+def get_available_spending_models():
+    """
+    Lấy danh sách tất cả các mô hình chi tiêu được hệ thống hỗ trợ.
+    Trả về thông tin chi tiết về mỗi mô hình bao gồm ID, tên và mô tả.
+    """
+    print(f"[TOOLS] get_available_spending_models called")
+    
+    # Gọi API để lấy danh sách các mô hình chi tiêu
+    headers = {"X-External-Secret": "thisIsSerectKeyPythonService"}
+    url = "https://easymoney.anttravel.online/api/v1/external-services?command=get_spending_models"
+    
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()  # Raise exception nếu HTTP error
+        
+        data = response.json()
+        
+        if data.get("status") != 200 or not data.get("data"):
+            print(f"[TOOLS] API returned error or empty data: {data.get('message')}")
+            return "Không thể lấy được danh sách mô hình chi tiêu. Vui lòng thử lại sau."
+        
+        models = data.get("data", [])
+        
+        # Nếu không có mô hình nào
+        if not models:
+            return "Hiện tại hệ thống chưa có mô hình chi tiêu nào."
+        
+        # Định dạng phản hồi thân thiện với người dùng
+        result = f"📊 **Các mô hình chi tiêu hiện có ({len(models)}):**\n\n"
+        
+        for idx, model in enumerate(models):
+            # Trích xuất thông tin
+            name = model.get("name", "Không có tên")
+            description = model.get("description", "Không có mô tả")
+            
+            # Loại bỏ HTML tags từ mô tả
+            clean_description = re.sub(r'<[^>]*>', '', description)
+            
+            # Thêm mô hình vào kết quả
+            result += f"**{idx+1}. {name}**\n"
+            result += f"{clean_description}\n\n"
+        
+        result += "Bạn có thể chọn một trong các mô hình chi tiêu trên để áp dụng cho tài chính cá nhân của mình."
+        return result
+        
+    except requests.exceptions.RequestException as e:
+        print(f"[TOOLS] API request failed: {str(e)}")
+        return f"Đã xảy ra lỗi khi lấy danh sách mô hình chi tiêu: {str(e)}"
+
 def format_currency(amount):
     """Định dạng số tiền theo chuẩn VND."""
     return f"{int(amount):,} VNĐ".replace(",", ".")
@@ -410,4 +460,4 @@ def format_user_friendly_datetime(datetime_str):
         print(f"[TOOLS] Error formatting datetime {datetime_str}: {str(e)}")
         return datetime_str
 
-tools = [user_input_expense, get_transaction_history, get_current_spending_model]
+tools = [user_input_expense, get_transaction_history, get_current_spending_model, get_available_spending_models]

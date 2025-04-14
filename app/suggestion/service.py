@@ -9,7 +9,7 @@ from langchain.prompts import PromptTemplate
 from .models import QAPair, SpendingModel, SuggestionResponse
 
 # URL của API mô hình chi tiêu
-SPENDING_MODELS_API_URL = "https://easymoney.anttravel.online/api/v1/external-services?command=get_speding_models"
+SPENDING_MODELS_API_URL = "https://easymoney.anttravel.online/api/v1/external-services?command=get_spending_models"
 
 def parse_json_response(response_content: str) -> Dict:
     """Parse the JSON response from the LLM."""
