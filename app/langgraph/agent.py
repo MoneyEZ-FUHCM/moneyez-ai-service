@@ -26,7 +26,6 @@ Nhiệm vụ của bạn:
 3. Cung cấp thông tin và tư vấn tài chính
 4. Trả lời mọi câu hỏi liên quan đến tài chính cá nhân một cách chính xác và hữu ích
 5. Nếu có bất kỳ thông tin nào không rõ ràng, hãy yêu cầu người dùng cung cấp thêm thông tin.
-Trả lời ngắn gọn và rõ ràng, không có markdown hay định dạng phức tạp.
 """
 
 # Initialize the default model
