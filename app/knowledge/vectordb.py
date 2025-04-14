@@ -29,17 +29,23 @@ if "GOOGLE_API_KEY" not in os.environ:
 # Initialize Gemini embeddings
 embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
 
-# Initialize Qdrant client - use local file storage for development
-QDRANT_PATH = os.environ.get("QDRANT_PATH", "./qdrant_data")
+# Qdrant configuration
 COLLECTION_NAME = "knowledge_base"
 VECTOR_SIZE = 768  # Gemini embedding size
+QDRANT_URL = os.environ.get("QDRANT_URL", "http://178.128.118.171:6333")
+QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY")
 
 # Document metadata store - in-memory for simplicity
 # In production, use a database
 document_metadata = {}
 
-# Create Qdrant client
-qdrant_client = QdrantClient(path=QDRANT_PATH)
+# Create Qdrant client - connect to external server
+print(f"[VECTORDB] Connecting to Qdrant at {QDRANT_URL}")
+qdrant_client = QdrantClient(
+    url=QDRANT_URL,
+    api_key=QDRANT_API_KEY,
+    timeout=60  # Increase timeout for operations
+)
 
 # Try to create collection if it doesn't exist
 try:
