@@ -36,6 +36,7 @@ jobs:
             ducdang03/money-ez-ai:latest
           build-args: |
             GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}
+            QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}
   deploy:
     runs-on: self-hosted
     needs: docker-build
@@ -57,6 +58,7 @@ jobs:
           docker pull ducdang03/money-ez-ai:latest
           docker run -d --name money-ez-ai -p 8888:8888 \
             -e GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }} \
+            -e QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }} \
             ducdang03/money-ez-ai:latest
   
       - name: Verify running containers
