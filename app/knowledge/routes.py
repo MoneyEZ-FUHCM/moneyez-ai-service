@@ -11,7 +11,7 @@ from .vectordb import process_and_store_document, delete_document, get_document_
 router = APIRouter()
 
 
-@router.post("/knowledge/upload", response_model=DocumentResponse)
+@router.post("/upload", response_model=DocumentResponse)
 async def upload_document(
         file: UploadFile = File(...)
 ):
@@ -51,7 +51,7 @@ async def upload_document(
         )
 
 
-@router.delete("/knowledge/delete/{document_id}", response_model=DocumentDeleteResponse)
+@router.delete("/delete/{document_id}", response_model=DocumentDeleteResponse)
 async def delete_document_endpoint(document_id: str):
     """Delete a document from the knowledge base."""
     print(f"\n[KNOWLEDGE API] Document deletion requested: {document_id}")
@@ -72,7 +72,7 @@ async def delete_document_endpoint(document_id: str):
         )
 
 
-@router.get("/knowledge/documents", response_model=BaseResponse)
+@router.get("/documents", response_model=BaseResponse)
 async def get_documents():
     """Get list of documents in the knowledge base."""
     try:
