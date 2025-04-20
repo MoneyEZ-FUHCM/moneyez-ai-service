@@ -147,55 +147,75 @@ def process_and_store_document(file, filename, content_type):
 def delete_document(document_id):
     """Delete document from vector database."""
     print(f"\n[VECTORDB] Attempting to delete document: {document_id}")
+    
+    try:
+        # Create a proper filter using Qdrant's models
+        filter_condition = Filter(
+            must=[
+                FieldCondition(
+                    key="metadata.document_id",
+                    match=MatchValue(value=document_id)
+                )
+            ]
+        )
 
-    if document_id in document_metadata:
-        try:
-            # Create a proper filter using Qdrant's models
-            filter_condition = Filter(
-                must=[
-                    FieldCondition(
-                        key="metadata.document_id",
-                        match=MatchValue(value=document_id)
+        # Get point IDs with the specified document_id
+        search_result = qdrant_client.scroll(
+            collection_name=COLLECTION_NAME,
+            scroll_filter=filter_condition,
+            limit=10000,  # Adjust based on expected max chunks per document
+            with_payload=True,  # Get payload to extract document name for logging
+            with_vectors=False
+        )
+
+        doc_name = document_id
+        if document_id in document_metadata:
+            doc_name = document_metadata[document_id].get('name', document_id)
+            
+        # Try to delete points even if not in memory metadata
+        if search_result and search_result[0]:
+            point_ids = [point.id for point in search_result[0]]
+            
+            if point_ids:
+                # Extract document name from the first point if available
+                if not doc_name and search_result[0][0].payload and "metadata" in search_result[0][0].payload:
+                    doc_name = search_result[0][0].payload["metadata"].get("document_name", document_id)
+                    
+                # Delete from Qdrant - Updated to use the new API format with points_selector
+                qdrant_client.delete(
+                    collection_name=COLLECTION_NAME,
+                    points_selector=Filter(
+                        must=[
+                            FieldCondition(
+                                key="metadata.document_id",
+                                match=MatchValue(value=document_id)
+                            )
+                        ]
                     )
-                ]
-            )
+                )
 
-            # Get point IDs with the specified document_id
-            search_result = qdrant_client.scroll(
-                collection_name=COLLECTION_NAME,
-                scroll_filter=filter_condition,
-                limit=10000,  # Adjust based on expected max chunks per document
-                with_payload=False,
-                with_vectors=False
-            )
-
-            if search_result and search_result[0]:
-                point_ids = [point.id for point in search_result[0]]
-                if point_ids:
-                    qdrant_client.delete(
-                        collection_name=COLLECTION_NAME,
-                        points_ids=point_ids
-                    )
-
-                    # Delete metadata
-                    doc_info = document_metadata[document_id]
+                print(f"[VECTORDB] Successfully deleted document: {doc_name} with {len(point_ids)} chunks")
+                
+                # Also delete from in-memory metadata if it exists
+                if document_id in document_metadata:
                     del document_metadata[document_id]
-                    print(
-                        f"[VECTORDB] Successfully deleted document: {doc_info.get('name', document_id)} with {len(point_ids)} chunks")
-                    return True
-
-            print(f"[VECTORDB] No chunks found for document: {document_id}")
-            # Clean up metadata even if no chunks were found
-            if document_id in document_metadata:
-                del document_metadata[document_id]
+                    
+                return True
+            else:
+                print(f"[VECTORDB] Found document but no points to delete: {doc_name}")
+                
+        # Clean up metadata even if no chunks were found
+        if document_id in document_metadata:
+            del document_metadata[document_id]
+            print(f"[VECTORDB] Removed document metadata for: {doc_name}")
             return True
+                
+        print(f"[VECTORDB] No document found with ID: {document_id}")
+        return False
 
-        except Exception as e:
-            print(f"[VECTORDB] Error deleting document: {str(e)}")
-            return False
-
-    print(f"[VECTORDB] Document not found: {document_id}")
-    return False
+    except Exception as e:
+        print(f"[VECTORDB] Error deleting document: {str(e)}")
+        return False
 
 
 def _get_documents_from_qdrant():
@@ -212,18 +232,33 @@ def _get_documents_from_qdrant():
         # Extract unique document IDs and metadata
         unique_docs = {}
         if result and result[0]:
+            # Calculate total content size for each document
+            content_sizes = {}
+            
             for point in result[0]:
                 if point.payload and "metadata" in point.payload:
                     doc_id = point.payload["metadata"].get("document_id")
                     doc_name = point.payload["metadata"].get("document_name")
-                    if doc_id and doc_name and doc_id not in unique_docs:
-                        unique_docs[doc_id] = {
-                            "document_id": doc_id,
-                            "name": doc_name,
-                            "size": 0,  # Size unknown from vector store
-                            "created_at": datetime.now().isoformat(),
-                            "content_type": "unknown"
-                        }
+                    
+                    if doc_id and doc_name:
+                        # Add content length to document's total size
+                        if "page_content" in point.payload and isinstance(point.payload["page_content"], str):
+                            content_sizes[doc_id] = content_sizes.get(doc_id, 0) + len(point.payload["page_content"])
+                        
+                        if doc_id not in unique_docs:
+                            unique_docs[doc_id] = {
+                                "document_id": doc_id,
+                                "name": doc_name,
+                                "size": 0,  # Will update with calculated size
+                                "created_at": datetime.now().isoformat(),
+                                "content_type": point.payload["metadata"].get("content_type", "unknown")
+                            }
+            
+            # Update document sizes
+            for doc_id, size in content_sizes.items():
+                if doc_id in unique_docs:
+                    unique_docs[doc_id]["size"] = max(size * 2, 1024)  # Estimate original file size, min 1KB
+                    
         return unique_docs
     except Exception as e:
         print(f"[VECTORDB] Error getting documents from Qdrant: {str(e)}")
