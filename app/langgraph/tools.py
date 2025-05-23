@@ -16,7 +16,7 @@ def get_user_subcategories(user_id):
     
     print(f"\n[TOOLS] get_user_subcategories called for user: {user_id}")
     headers = {"X-External-Secret": "thisIsSerectKeyPythonService"}
-    url = f"https://easymoney.anttravel.online/api/v1/external-services?command=get_subcategories&query=user_id={user_id}"
+    url = f"http://160.191.88.194:8080/api/v1/external-services?command=get_subcategories&query=user_id={user_id}"
 
     print(f"[TOOLS] Making API request to: {url}")
     response = requests.get(url, headers=headers)
@@ -113,7 +113,7 @@ def user_input_expense(user_query: str):
         transaction_datetime = current_datetime
     print(f"[TOOLS] Transaction datetime: {transaction_datetime}")
 
-    url = "https://easymoney.anttravel.online/api/v1/external-services"
+    url = "http://160.191.88.194:8080/api/v1/external-services"
     headers = {"X-External-Secret": "thisIsSerectKeyPythonService"}
     body = {
         "command": "create_transaction_v2",
@@ -239,7 +239,7 @@ def get_transaction_history(date_range: Optional[str] = None):
     print(f"[TOOLS] Fetching transaction history for user {userId} from {from_date} to {to_date}")
     
     headers = {"X-External-Secret": "thisIsSerectKeyPythonService"}
-    url = f"https://easymoney.anttravel.online/api/v1/external-services?command=get_transaction_histories_user&query=user_id={userId},from_date={from_date},to_date={to_date}"
+    url = f"http://160.191.88.194:8080/api/v1/external-services?command=get_transaction_histories_user&query=user_id={userId},from_date={from_date},to_date={to_date}"
     
     try:
         response = requests.get(url, headers=headers)
@@ -305,7 +305,7 @@ def get_current_spending_model():
     print(f"[TOOLS] Fetching current spending model for user {userId}")
     
     headers = {"X-External-Secret": "thisIsSerectKeyPythonService"}
-    url = f"https://easymoney.anttravel.online/api/v1/external-services?command=get_user_spending_model&query=user_id={userId}"
+    url = f"http://160.191.88.194:8080/api/v1/external-services?command=get_user_spending_model&query=user_id={userId}"
     
     try:
         response = requests.get(url, headers=headers)
@@ -363,7 +363,7 @@ def get_available_spending_models():
     
     # Gọi API để lấy danh sách các mô hình chi tiêu
     headers = {"X-External-Secret": "thisIsSerectKeyPythonService"}
-    url = "https://easymoney.anttravel.online/api/v1/external-services?command=get_spending_models"
+    url = "http://160.191.88.194:8080/api/v1/external-services?command=get_spending_models"
     
     try:
         response = requests.get(url, headers=headers)
