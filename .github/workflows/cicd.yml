@@ -37,29 +37,29 @@ jobs:
           build-args: |
             GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}
             QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}
-  deploy:
-    runs-on: self-hosted
-    needs: docker-build
+  # deploy:
+  #   runs-on: self-hosted
+  #   needs: docker-build
 
-    steps:
+  #   steps:
 
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          clean: false
+  #     - name: Checkout code
+  #       uses: actions/checkout@v3
+  #       with:
+  #         clean: false
 
-      - name: Clean up old Docker resources
-        run: |
-          docker stop money-ez-ai || true
-          docker rm money-ez-ai || true
+  #     - name: Clean up old Docker resources
+  #       run: |
+  #         docker stop money-ez-ai || true
+  #         docker rm money-ez-ai || true
     
-      - name: Deploy to VPS
-        run: |
-          docker pull ducdang03/money-ez-ai:latest
-          docker run -d --name money-ez-ai -p 8888:8888 \
-            -e GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }} \
-            -e QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }} \
-            ducdang03/money-ez-ai:latest
+  #     - name: Deploy to VPS
+  #       run: |
+  #         docker pull ducdang03/money-ez-ai:latest
+  #         docker run -d --name money-ez-ai -p 8888:8888 \
+  #           -e GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }} \
+  #           -e QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }} \
+  #           ducdang03/money-ez-ai:latest
   
-      - name: Verify running containers
-        run: docker ps -a
+  #     - name: Verify running containers
+  #       run: docker ps -a
